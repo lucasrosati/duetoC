@@ -1,2 +1,0 @@
-balthzar 5 2
-balthazar 6 0

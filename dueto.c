@@ -112,11 +112,10 @@ void jogar() {
         }
 
         verificarEImprimirPalavras(tentativa, palavraSecreta1, palavraSecreta2, &acertou1, &acertou2);
-        if (!acertou1 || !acertou2) {
-            numTentativas++;
-        }
+        numTentativas++;
     }
 
+    printf("\nAs palavras eram \"%s\" e \"%s\".\n", palavraSecreta1, palavraSecreta2);
     int acertos = (acertou1 ? 1 : 0) + (acertou2 ? 1 : 0);
     printf("\n%s: Você acertou %d palavras com %d tentativas.\n", nomeJogador, acertos, numTentativas);
     adicionarAoRanking(nomeJogador, numTentativas, acertos);
@@ -241,10 +240,10 @@ void liberarRanking() {
 
 
 void resetarRanking() {
-    liberarRanking();
+    liberarRanking(); 
     FILE *file = fopen("ranking.txt", "w");
     if (file) {
-        fclose(file);
+        fclose(file); 
         printf("Ranking limpo com sucesso.\n");
     } else {
         printf("Erro ao limpar o ranking.\n");
