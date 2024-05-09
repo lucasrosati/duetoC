@@ -33,9 +33,9 @@ Jogador* ranking = NULL;
 
 void limparBuffer() {
     int c;
-    while ((c = getchar()) != '\n' && c != EOF) {} // Limpa todos os caracteres até o fim da linha ou fim do arquivo.
+    while ((c = getchar()) != '\n' && c != EOF) {}
 }
-// Protótipos das funções
+
 void jogar();
 void adicionarAoRanking(char* nome, int tentativas, int acertos);
 void exibirRanking();
@@ -91,7 +91,7 @@ void jogar() {
     char nomeJogador[50];
     printf("Digite seu nome: ");
     fgets(nomeJogador, sizeof(nomeJogador), stdin);
-    nomeJogador[strcspn(nomeJogador, "\n")] = '\0'; // Remove a nova linha do final, se houver
+    nomeJogador[strcspn(nomeJogador, "\n")] = '\0';
 
     char palavraSecreta1[TAM_PALAVRA], palavraSecreta2[TAM_PALAVRA];
     strcpy(palavraSecreta1, escolherPalavraSecreta(NULL));
@@ -104,23 +104,23 @@ void jogar() {
     while (numTentativas < MAX_TENTATIVAS && (!acertou1 || !acertou2)) {
         printf("\nDigite uma palavra de 5 letras: ");
         fgets(tentativa, sizeof(tentativa), stdin);
-        tentativa[strcspn(tentativa, "\n")] = '\0'; // Remove a nova linha do final
+        tentativa[strcspn(tentativa, "\n")] = '\0';
 
-        // Verifica se a palavra tem 5 letras
         if (strlen(tentativa) != 5) {
             printf("Erro: Você deve inserir exatamente 5 letras. Tente novamente.\n");
-            continue; // Retorna ao início do loop para tentar novamente
+            continue;
         }
 
         verificarEImprimirPalavras(tentativa, palavraSecreta1, palavraSecreta2, &acertou1, &acertou2);
-        numTentativas++;
+        if (!acertou1 || !acertou2) {
+            numTentativas++;
+        }
     }
 
     int acertos = (acertou1 ? 1 : 0) + (acertou2 ? 1 : 0);
     printf("\n%s: Você acertou %d palavras com %d tentativas.\n", nomeJogador, acertos, numTentativas);
     adicionarAoRanking(nomeJogador, numTentativas, acertos);
 }
-
 
 
 char* escolherPalavraSecreta(const char* exclude) {
@@ -134,25 +134,29 @@ char* escolherPalavraSecreta(const char* exclude) {
 }
 
 void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, bool* acertou1, bool* acertou2) {
-    if (!*acertou1) {  // Se a primeira palavra não foi adivinhada
+    if (strcmp(input, secreta1) == 0) {
+        *acertou1 = true;
+    }
+    if (strcmp(input, secreta2) == 0) {
+        *acertou2 = true;
+    }
+
+    if (!*acertou1) {
         for (size_t i = 0; i < strlen(input); i++) {
             if (input[i] == secreta1[i]) {
-                printf("\x1b[32m%c\x1b[0m", input[i]); // Verde para a posição correta
+                printf("\x1b[32m%c\x1b[0m", input[i]);
             } else if (strchr(secreta1, input[i])) {
-                printf("\x1b[33m%c\x1b[0m", input[i]); // Amarelo para letra correta em posição errada
+                printf("\x1b[33m%c\x1b[0m", input[i]);
             } else {
-                printf("\x1b[31m%c\x1b[0m", input[i]); // Vermelho para letra incorreta
+                printf("\x1b[31m%c\x1b[0m", input[i]);
             }
         }
         printf(" ");
-    } else { // Se a primeira palavra foi adivinhada
-        for (size_t i = 0; i < strlen(secreta1); i++) {
-            printf("\x1b[32m%c\x1b[0m", secreta1[i]);
-        }
-        printf(" ");
+    } else { 
+        printf("\x1b[32m%s\x1b[0m ", secreta1);
     }
 
-    if (!*acertou2) {  // Se a segunda palavra não foi adivinhada
+    if (!*acertou2) {  
         for (size_t i = 0; i < strlen(input); i++) {
             if (input[i] == secreta2[i]) {
                 printf("\x1b[32m%c\x1b[0m", input[i]);
@@ -162,14 +166,11 @@ void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, boo
                 printf("\x1b[31m%c\x1b[0m", input[i]);
             }
         }
-    } else { // Se a segunda palavra foi adivinhada
-        for (size_t i = 0; i < strlen(secreta2); i++) {
-            printf("\x1b[32m%c\x1b[0m", secreta2[i]);
-        }
+    } else { 
+        printf("\x1b[32m%s\x1b[0m", secreta2);
     }
     printf("\n");
 }
-
 
 void adicionarAoRanking(char* nome, int tentativas, int acertos) {
     Jogador* novo = (Jogador*)malloc(sizeof(Jogador));
@@ -178,7 +179,6 @@ void adicionarAoRanking(char* nome, int tentativas, int acertos) {
     novo->acertos = acertos;
     novo->prox = NULL;
 
-    // Lógica para inserir mantendo a ordem por tentativas e acertos
     Jogador **ptr = &ranking, *anterior = NULL;
     while (*ptr && ((*ptr)->acertos > acertos || ((*ptr)->acertos == acertos && (*ptr)->tentativas <= tentativas))) {
         anterior = *ptr;
@@ -195,7 +195,7 @@ void adicionarAoRanking(char* nome, int tentativas, int acertos) {
 
 void carregarRanking() {
     FILE *file = fopen("ranking.txt", "r");
-    if (!file) return; // Falha ao abrir o arquivo ou arquivo inexistente
+    if (!file) return;
 
     char nome[50];
     int tentativas, acertos;
@@ -236,15 +236,15 @@ void liberarRanking() {
         atual = atual->prox;
         free(temp);
     }
-    ranking = NULL; // Muito importante para reiniciar a lista
+    ranking = NULL; 
 }
 
 
 void resetarRanking() {
-    liberarRanking(); // Limpa a lista encadeada
-    FILE *file = fopen("ranking.txt", "w"); // Abre para escrita, limpando o conteúdo
+    liberarRanking();
+    FILE *file = fopen("ranking.txt", "w");
     if (file) {
-        fclose(file); // Fecha o arquivo, que agora está vazio
+        fclose(file);
         printf("Ranking limpo com sucesso.\n");
     } else {
         printf("Erro ao limpar o ranking.\n");
