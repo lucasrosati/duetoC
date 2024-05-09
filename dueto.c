@@ -5,7 +5,7 @@
 #include <stdbool.h>
 
 #define NUM_PALAVRAS 101
-#define TAM_PALAVRA 10  // Inclui espaço para o caractere nulo '\0'
+#define TAM_PALAVRA 10
 #define MAX_TENTATIVAS 6
 
 char palavras[NUM_PALAVRAS][TAM_PALAVRA] = {
@@ -25,26 +25,33 @@ char palavras[NUM_PALAVRAS][TAM_PALAVRA] = {
 typedef struct Jogador {
     char nome[50];
     int tentativas;
+    int acertos;
     struct Jogador* prox;
 } Jogador;
 
 Jogador* ranking = NULL;
 
+void limparBuffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF) {} // Limpa todos os caracteres até o fim da linha ou fim do arquivo.
+}
+// Protótipos das funções
 void jogar();
-void adicionarAoRanking(char* nome, int tentativas);
+void adicionarAoRanking(char* nome, int tentativas, int acertos);
 void exibirRanking();
 void liberarRanking();
 void menu();
+void carregarRanking();
+void salvarRanking();
+void resetarRanking();
 char* escolherPalavraSecreta(const char* exclude);
-void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, bool acertou1, bool acertou2);
-void quickSort(Jogador** headRef);
-Jogador* quickSortRec(Jogador* head, Jogador* end);
-Jogador* particao(Jogador* inicio, Jogador* fim, Jogador** novoInicio, Jogador** novoFim);
-Jogador* getUltimo(Jogador* cur);
+void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, bool* acertou1, bool* acertou2);
 
 int main() {
     srand(time(NULL));
+    carregarRanking();
     menu();
+    salvarRanking();
     liberarRanking();
     return 0;
 }
@@ -55,7 +62,8 @@ void menu() {
         printf("\nMenu:\n");
         printf("1. Jogar\n");
         printf("2. Ver Ranking\n");
-        printf("3. Sair\n");
+        printf("3. Resetar Ranking\n");
+        printf("4. Sair\n");
         printf("Escolha uma opção: ");
         scanf("%d", &opcao);
         getchar();
@@ -68,78 +76,76 @@ void menu() {
                 exibirRanking();
                 break;
             case 3:
+                resetarRanking();
+                break;
+            case 4:
                 printf("Obrigado por jogar!\n");
                 break;
             default:
                 printf("Opção inválida, tente novamente.\n");
         }
-    } while (opcao != 3);
+    } while (opcao != 4);
 }
 
 void jogar() {
     char nomeJogador[50];
     printf("Digite seu nome: ");
-    fgets(nomeJogador, 50, stdin);
-    nomeJogador[strcspn(nomeJogador, "\n")] = 0;
+    fgets(nomeJogador, sizeof(nomeJogador), stdin);
+    nomeJogador[strcspn(nomeJogador, "\n")] = '\0'; // Remove a nova linha do final, se houver
 
     char palavraSecreta1[TAM_PALAVRA], palavraSecreta2[TAM_PALAVRA];
     strcpy(palavraSecreta1, escolherPalavraSecreta(NULL));
     strcpy(palavraSecreta2, escolherPalavraSecreta(palavraSecreta1));
 
-    char tentativas[MAX_TENTATIVAS][TAM_PALAVRA];
+    char tentativa[TAM_PALAVRA];
     int numTentativas = 0;
     bool acertou1 = false, acertou2 = false;
 
     while (numTentativas < MAX_TENTATIVAS && (!acertou1 || !acertou2)) {
         printf("\nDigite uma palavra de 5 letras: ");
-        scanf("%s", tentativas[numTentativas]);
-        getchar(); // Limpa o buffer após a entrada
+        scanf("%s", tentativa);
+        limparBuffer(); // Limpa buffer após entrada para garantir que não haja caracteres indesejados
 
-        if (strcmp(tentativas[numTentativas], palavraSecreta1) == 0) acertou1 = true;
-        if (strcmp(tentativas[numTentativas], palavraSecreta2) == 0) acertou2 = true;
-
-        verificarEImprimirPalavras(tentativas[numTentativas], palavraSecreta1, palavraSecreta2, acertou1, acertou2);
+        verificarEImprimirPalavras(tentativa, palavraSecreta1, palavraSecreta2, &acertou1, &acertou2);
         numTentativas++;
     }
 
-    if (acertou1 && acertou2) {
-        printf("\nParabéns, você acertou ambas as palavras: %s e %s\n", palavraSecreta1, palavraSecreta2);
-    } else {
-        printf("\nVocê não acertou todas as palavras. As palavras eram: %s e %s\n", palavraSecreta1, palavraSecreta2);
-    }
-
-    adicionarAoRanking(nomeJogador, numTentativas);
+    int acertos = (acertou1 ? 1 : 0) + (acertou2 ? 1 : 0);
+    printf("\n%s: Você acertou %d palavras com %d tentativas.\n", nomeJogador, acertos, numTentativas);
+    adicionarAoRanking(nomeJogador, numTentativas, acertos);
 }
 
+
 char* escolherPalavraSecreta(const char* exclude) {
+    static char escolhida[TAM_PALAVRA];
     int idx;
     do {
         idx = rand() % NUM_PALAVRAS;
-    } while (exclude != NULL && strcmp(palavras[idx], exclude) == 0);
-    return palavras[idx];
+    } while (exclude && strcmp(palavras[idx], exclude) == 0);
+    strcpy(escolhida, palavras[idx]);
+    return escolhida;
 }
 
-void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, bool acertou1, bool acertou2) {
-    // First, handle the output for the first secret word
-    if (!acertou1) { // Only print the feedback if the word hasn't been fully guessed yet
+void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, bool* acertou1, bool* acertou2) {
+    if (!*acertou1) {  // Se a primeira palavra não foi adivinhada
         for (size_t i = 0; i < strlen(input); i++) {
             if (input[i] == secreta1[i]) {
-                printf("\x1b[32m%c\x1b[0m", input[i]); // Green for correct position
+                printf("\x1b[32m%c\x1b[0m", input[i]); // Verde para a posição correta
             } else if (strchr(secreta1, input[i])) {
-                printf("\x1b[33m%c\x1b[0m", input[i]); // Yellow for correct letter wrong place
+                printf("\x1b[33m%c\x1b[0m", input[i]); // Amarelo para letra correta em posição errada
             } else {
-                printf("\x1b[31m%c\x1b[0m", input[i]); // Red for incorrect letter
+                printf("\x1b[31m%c\x1b[0m", input[i]); // Vermelho para letra incorreta
             }
         }
-    } else { // If already guessed, print the word correctly in green
+        printf(" ");
+    } else { // Se a primeira palavra foi adivinhada
         for (size_t i = 0; i < strlen(secreta1); i++) {
             printf("\x1b[32m%c\x1b[0m", secreta1[i]);
         }
+        printf(" ");
     }
-    printf(" ");
 
-    // Then, handle the output for the second secret word
-    if (!acertou2) {
+    if (!*acertou2) {  // Se a segunda palavra não foi adivinhada
         for (size_t i = 0; i < strlen(input); i++) {
             if (input[i] == secreta2[i]) {
                 printf("\x1b[32m%c\x1b[0m", input[i]);
@@ -149,7 +155,7 @@ void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, boo
                 printf("\x1b[31m%c\x1b[0m", input[i]);
             }
         }
-    } else { // If already guessed, print the word correctly in green
+    } else { // Se a segunda palavra foi adivinhada
         for (size_t i = 0; i < strlen(secreta2); i++) {
             printf("\x1b[32m%c\x1b[0m", secreta2[i]);
         }
@@ -158,101 +164,83 @@ void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, boo
 }
 
 
-
-void adicionarAoRanking(char* nome, int tentativas) {
-    Jogador* novo = (Jogador*) malloc(sizeof(Jogador));
+void adicionarAoRanking(char* nome, int tentativas, int acertos) {
+    Jogador* novo = (Jogador*)malloc(sizeof(Jogador));
     strcpy(novo->nome, nome);
     novo->tentativas = tentativas;
+    novo->acertos = acertos;
     novo->prox = NULL;
 
-    if (ranking == NULL || tentativas < ranking->tentativas) {
+    // Lógica para inserir mantendo a ordem por tentativas e acertos
+    Jogador **ptr = &ranking, *anterior = NULL;
+    while (*ptr && ((*ptr)->acertos > acertos || ((*ptr)->acertos == acertos && (*ptr)->tentativas <= tentativas))) {
+        anterior = *ptr;
+        ptr = &(*ptr)->prox;
+    }
+    if (anterior) {
+        novo->prox = anterior->prox;
+        anterior->prox = novo;
+    } else {
         novo->prox = ranking;
         ranking = novo;
-    } else {
-        Jogador* atual = ranking;
-        while (atual->prox != NULL && atual->prox->tentativas <= tentativas) {
-            atual = atual->prox;
-        }
-        novo->prox = atual->prox;
-        atual->prox = novo;
+    }
+}
+
+void carregarRanking() {
+    FILE *file = fopen("ranking.txt", "r");
+    if (!file) return; // Falha ao abrir o arquivo ou arquivo inexistente
+
+    char nome[50];
+    int tentativas, acertos;
+    while (fscanf(file, "%s %d %d", nome, &tentativas, &acertos) == 3) {
+        adicionarAoRanking(nome, tentativas, acertos);
+    }
+    fclose(file);
+}
+
+void salvarRanking() {
+    FILE *file = fopen("ranking.txt", "w");
+    if (!file) {
+        printf("Erro ao salvar o ranking.\n");
+        return;
     }
 
-    quickSort(&ranking);  // Ordena após adicionar novo jogador
-}
-
-Jogador* quickSortRec(Jogador* head, Jogador* end) {
-    if (!head || head == end)
-        return head;
-
-    Jogador* novoInicio = NULL, *novoFim = NULL;
-    Jogador* pivot = particao(head, end, &novoInicio, &novoFim);
-
-    if (novoInicio != pivot) {
-        Jogador* tmp = novoInicio;
-        while (tmp->prox != pivot) tmp = tmp->prox;
-        tmp->prox = NULL;
-
-        novoInicio = quickSortRec(novoInicio, tmp);
-        tmp = getUltimo(novoInicio);
-        tmp->prox = pivot;
+    Jogador *atual = ranking;
+    while (atual) {
+        fprintf(file, "%s %d %d\n", atual->nome, atual->tentativas, atual->acertos);
+        atual = atual->prox;
     }
-
-    pivot->prox = quickSortRec(pivot->prox, novoFim);
-    return novoInicio;
-}
-
-void quickSort(Jogador** headRef) {
-    *headRef = quickSortRec(*headRef, getUltimo(*headRef));
-}
-
-Jogador* particao(Jogador* inicio, Jogador* fim, Jogador** novoInicio, Jogador** novoFim) {
-    Jogador* pivot = fim;
-    Jogador* anterior = NULL, *atual = inicio, *cauda = pivot;
-
-    while (atual != pivot) {
-        if (atual->tentativas < pivot->tentativas) {
-            if ((*novoInicio) == NULL) (*novoInicio) = atual;
-            anterior = atual;
-            atual = atual->prox;
-        } else {
-            if (anterior) anterior->prox = atual->prox;
-            Jogador* tmp = atual->prox;
-            atual->prox = NULL;
-            cauda->prox = atual;
-            cauda = atual;
-            atual = tmp;
-        }
-    }
-
-    if ((*novoInicio) == NULL) (*novoInicio) = pivot;
-    (*novoFim) = cauda;
-    return pivot;
-}
-
-Jogador* getUltimo(Jogador* cur) {
-    while (cur != NULL && cur->prox != NULL) cur = cur->prox;
-    return cur;
+    fclose(file);
 }
 
 void exibirRanking() {
-    if (ranking == NULL) {
-        printf("Ainda não há jogadores no ranking.\n");
-    } else {
-        printf("Ranking:\n");
-        Jogador* atual = ranking;
-        while (atual != NULL) {
-            printf("%s: %d tentativas\n", atual->nome, atual->tentativas);
-            atual = atual->prox;
-        }
+    printf("Ranking:\n");
+    Jogador *atual = ranking;
+    while (atual) {
+        printf("%s - Tentativas: %d, Acertos: %d\n", atual->nome, atual->tentativas, atual->acertos);
+        atual = atual->prox;
     }
 }
 
 void liberarRanking() {
-    Jogador* atual = ranking;
+    Jogador *atual = ranking;
     while (atual != NULL) {
-        Jogador* temp = atual;
+        Jogador *temp = atual;
         atual = atual->prox;
         free(temp);
+    }
+    ranking = NULL; // Muito importante para reiniciar a lista
+}
+
+
+void resetarRanking() {
+    liberarRanking(); // Limpa a lista encadeada
+    FILE *file = fopen("ranking.txt", "w"); // Abre para escrita, limpando o conteúdo
+    if (file) {
+        fclose(file); // Fecha o arquivo, que agora está vazio
+        printf("Ranking limpo com sucesso.\n");
+    } else {
+        printf("Erro ao limpar o ranking.\n");
     }
 }
 
