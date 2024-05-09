@@ -249,4 +249,3 @@ void resetarRanking() {
         printf("Erro ao limpar o ranking.\n");
     }
 }
-
