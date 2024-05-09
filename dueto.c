@@ -103,8 +103,14 @@ void jogar() {
 
     while (numTentativas < MAX_TENTATIVAS && (!acertou1 || !acertou2)) {
         printf("\nDigite uma palavra de 5 letras: ");
-        scanf("%s", tentativa);
-        limparBuffer(); // Limpa buffer após entrada para garantir que não haja caracteres indesejados
+        fgets(tentativa, sizeof(tentativa), stdin);
+        tentativa[strcspn(tentativa, "\n")] = '\0'; // Remove a nova linha do final
+
+        // Verifica se a palavra tem 5 letras
+        if (strlen(tentativa) != 5) {
+            printf("Erro: Você deve inserir exatamente 5 letras. Tente novamente.\n");
+            continue; // Retorna ao início do loop para tentar novamente
+        }
 
         verificarEImprimirPalavras(tentativa, palavraSecreta1, palavraSecreta2, &acertou1, &acertou2);
         numTentativas++;
@@ -114,6 +120,7 @@ void jogar() {
     printf("\n%s: Você acertou %d palavras com %d tentativas.\n", nomeJogador, acertos, numTentativas);
     adicionarAoRanking(nomeJogador, numTentativas, acertos);
 }
+
 
 
 char* escolherPalavraSecreta(const char* exclude) {
