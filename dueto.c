@@ -9,17 +9,17 @@
 #define MAX_TENTATIVAS 6
 
 char palavras[NUM_PALAVRAS][TAM_PALAVRA] = {
-    "sagaz", "âmago", "negro", "termo", "êxito", "mexer", "nobre", "senso", "afeto", "algoz",
-    "ética", "plena", "fazer", "tênue", "mútua", "assim", "vigor", "sutil", "aquém", "porém",
-    "seção", "fosse", "sobre", "poder", "sanar", "ideia", "audaz", "cerne", "inato", "moral",
-    "desde", "muito", "justo", "quiçá", "honra", "torpe", "sonho", "razão", "fútil", "etnia",
-    "ícone", "amigo", "anexo", "égide", "tange", "dengo", "lapso", "haver", "expor", "tempo",
-    "então", "mútuo", "seara", "casal", "boçal", "hábil", "saber", "ávido", "ardil", "pesar",
-    "graça", "dizer", "causa", "óbice", "dever", "genro", "coser", "pária", "posse", "tenaz",
-    "sendo", "brado", "crivo", "prole", "comum", "ainda", "estar", "xibiu", "temor", "corja",
-    "ápice", "detém", "ânimo", "ceder", "assaz", "pauta", "ânsia", "culto", "digno", "fugaz",
-    "censo", "mundo", "atroz", "forte", "gleba", "vício", "vulgo", "cozer", "valha", "criar",
-    "denso"
+    "claro", "fases", "gesto", "jovem", "lugar", "mente", "noite", "papel", "reino", "senso",
+    "texto", "unido", "vasto", "lenda", "doido", "carro", "sabor", "trato", "suave", "mover",
+    "crepe", "risos", "gruta", "fusao", "salva", "feito", "gemer", "limpo", "macio", "curvo",
+    "pomba", "quase", "tonal", "russo", "duras", "posse", "bravo", "esqui", "usina", "pilar",
+    "baixo", "disco", "longo", "bocal", "moral", "altar", "breve", "troca", "sutil", "pobre",
+    "densa", "costa", "pesca", "antes", "fruta", "livro", "bagre", "bruto", "ficha", "nuvem",
+    "viver", "grama", "nevar", "floco", "forma", "gesso", "rezar", "jaula", "lotar", "nervo",
+    "obeso", "patio", "quilo", "renda", "sorte", "terra", "ursos", "visto", "troco", "rapaz",
+    "leite", "prova", "quota", "risco", "sinal", "temor", "trigo", "bolso", "cedro", "farto",
+    "golpe", "haste", "imune", "janta", "luzir", "manha", "noiva", "haver", "pente", "dente",
+    "sopro"
 };
 
 typedef struct Jogador {
