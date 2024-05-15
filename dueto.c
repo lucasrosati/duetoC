@@ -3,6 +3,7 @@
 #include <string.h>
 #include <time.h>
 #include <stdbool.h>
+#include <ctype.h>
 
 #define NUM_PALAVRAS 101
 #define TAM_PALAVRA 10
@@ -46,6 +47,7 @@ void salvarRanking();
 void resetarRanking();
 char* escolherPalavraSecreta(const char* exclude);
 void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, bool* acertou1, bool* acertou2);
+void converterParaMinusculas(char* str);
 
 int main() {
     srand(time(NULL));
@@ -111,6 +113,7 @@ void jogar() {
             continue;
         }
 
+        converterParaMinusculas(tentativa); // Converte a palavra para minúsculas
         verificarEImprimirPalavras(tentativa, palavraSecreta1, palavraSecreta2, &acertou1, &acertou2);
         numTentativas++;
     }
@@ -120,7 +123,6 @@ void jogar() {
     printf("\n%s: Você acertou %d palavras com %d tentativas.\n", nomeJogador, acertos, numTentativas);
     adicionarAoRanking(nomeJogador, numTentativas, acertos);
 }
-
 
 char* escolherPalavraSecreta(const char* exclude) {
     static char escolhida[TAM_PALAVRA];
@@ -151,11 +153,11 @@ void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, boo
             }
         }
         printf(" ");
-    } else { 
+    } else {
         printf("\x1b[32m%s\x1b[0m ", secreta1);
     }
 
-    if (!*acertou2) {  
+    if (!*acertou2) {
         for (size_t i = 0; i < strlen(input); i++) {
             if (input[i] == secreta2[i]) {
                 printf("\x1b[32m%c\x1b[0m", input[i]);
@@ -165,7 +167,7 @@ void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, boo
                 printf("\x1b[31m%c\x1b[0m", input[i]);
             }
         }
-    } else { 
+    } else {
         printf("\x1b[32m%s\x1b[0m", secreta2);
     }
     printf("\n");
@@ -235,17 +237,22 @@ void liberarRanking() {
         atual = atual->prox;
         free(temp);
     }
-    ranking = NULL; 
+    ranking = NULL;
 }
 
-
 void resetarRanking() {
-    liberarRanking(); 
+    liberarRanking();
     FILE *file = fopen("ranking.txt", "w");
     if (file) {
-        fclose(file); 
+        fclose(file);
         printf("Ranking limpo com sucesso.\n");
     } else {
         printf("Erro ao limpar o ranking.\n");
+    }
+}
+
+void converterParaMinusculas(char* str) {
+    for (int i = 0; str[i]; i++) {
+        str[i] = tolower(str[i]);
     }
 }
