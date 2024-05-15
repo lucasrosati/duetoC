@@ -23,10 +23,16 @@ char palavras[NUM_PALAVRAS][TAM_PALAVRA] = {
     "sopro"
 };
 
+typedef struct Tentativa {
+    char palavra[TAM_PALAVRA];
+    struct Tentativa* prox;
+} Tentativa;
+
 typedef struct Jogador {
     char nome[50];
     int tentativas;
     int acertos;
+    Tentativa* tentativasList;
     struct Jogador* prox;
 } Jogador;
 
@@ -35,6 +41,11 @@ Jogador* ranking = NULL;
 void limparBuffer() {
     int c;
     while ((c = getchar()) != '\n' && c != EOF) {}
+}
+
+void pausarParaContinuar() {
+    printf("\nPressione Enter para continuar...");
+    while (getchar() != '\n');
 }
 
 void jogar();
@@ -46,8 +57,11 @@ void carregarRanking();
 void salvarRanking();
 void resetarRanking();
 char* escolherPalavraSecreta(const char* exclude);
+void verificarTentativas(Tentativa* head, char* secreta1, char* secreta2, bool* acertou1, bool* acertou2);
 void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, bool* acertou1, bool* acertou2);
 void converterParaMinusculas(char* str);
+void adicionarTentativa(Tentativa** head, char* palavra);
+void liberarTentativas(Tentativa* head);
 
 int main() {
     srand(time(NULL));
@@ -58,9 +72,18 @@ int main() {
     return 0;
 }
 
+void limparTela() {
+#ifdef _WIN32
+    system("cls");
+#else
+    system("clear");
+#endif
+}
+
 void menu() {
     int opcao;
     do {
+        limparTela();
         printf("\nMenu:\n");
         printf("1. Jogar\n");
         printf("2. Ver Ranking\n");
@@ -68,7 +91,7 @@ void menu() {
         printf("4. Sair\n");
         printf("Escolha uma opção: ");
         scanf("%d", &opcao);
-        getchar();
+        limparBuffer();
 
         switch (opcao) {
             case 1:
@@ -90,6 +113,8 @@ void menu() {
 }
 
 void jogar() {
+    limparTela();
+
     char nomeJogador[50];
     printf("Digite seu nome: ");
     fgets(nomeJogador, sizeof(nomeJogador), stdin);
@@ -99,11 +124,16 @@ void jogar() {
     strcpy(palavraSecreta1, escolherPalavraSecreta(NULL));
     strcpy(palavraSecreta2, escolherPalavraSecreta(palavraSecreta1));
 
+    Jogador jogador;
+    strcpy(jogador.nome, nomeJogador);
+    jogador.tentativas = 0;
+    jogador.acertos = 0;
+    jogador.tentativasList = NULL;
+
     char tentativa[TAM_PALAVRA];
-    int numTentativas = 0;
     bool acertou1 = false, acertou2 = false;
 
-    while (numTentativas < MAX_TENTATIVAS && (!acertou1 || !acertou2)) {
+    while (jogador.tentativas < MAX_TENTATIVAS && (!acertou1 || !acertou2)) {
         printf("\nDigite uma palavra de 5 letras: ");
         fgets(tentativa, sizeof(tentativa), stdin);
         tentativa[strcspn(tentativa, "\n")] = '\0';
@@ -113,15 +143,22 @@ void jogar() {
             continue;
         }
 
-        converterParaMinusculas(tentativa); // Converte a palavra para minúsculas
-        verificarEImprimirPalavras(tentativa, palavraSecreta1, palavraSecreta2, &acertou1, &acertou2);
-        numTentativas++;
+        converterParaMinusculas(tentativa);
+        adicionarTentativa(&jogador.tentativasList, tentativa);
+
+        limparTela();
+        verificarTentativas(jogador.tentativasList, palavraSecreta1, palavraSecreta2, &acertou1, &acertou2);
+        jogador.tentativas++;
     }
 
     printf("\nAs palavras eram \"%s\" e \"%s\".\n", palavraSecreta1, palavraSecreta2);
-    int acertos = (acertou1 ? 1 : 0) + (acertou2 ? 1 : 0);
-    printf("\n%s: Você acertou %d palavras com %d tentativas.\n", nomeJogador, acertos, numTentativas);
-    adicionarAoRanking(nomeJogador, numTentativas, acertos);
+    jogador.acertos = (acertou1 ? 1 : 0) + (acertou2 ? 1 : 0);
+    printf("\n%s: Você acertou %d palavras com %d tentativas.\n", jogador.nome, jogador.acertos, jogador.tentativas);
+    adicionarAoRanking(jogador.nome, jogador.tentativas, jogador.acertos);
+
+    liberarTentativas(jogador.tentativasList);
+
+    pausarParaContinuar();
 }
 
 char* escolherPalavraSecreta(const char* exclude) {
@@ -132,6 +169,26 @@ char* escolherPalavraSecreta(const char* exclude) {
     } while (exclude && strcmp(palavras[idx], exclude) == 0);
     strcpy(escolhida, palavras[idx]);
     return escolhida;
+}
+
+void adicionarTentativa(Tentativa** head, char* palavra) {
+    Tentativa* novaTentativa = (Tentativa*)malloc(sizeof(Tentativa));
+    if (novaTentativa == NULL) {
+        printf("Erro ao alocar memória para nova tentativa.\n");
+        exit(1);
+    }
+    strcpy(novaTentativa->palavra, palavra);
+    novaTentativa->prox = *head;
+    *head = novaTentativa;
+}
+
+void verificarTentativas(Tentativa* head, char* secreta1, char* secreta2, bool* acertou1, bool* acertou2) {
+    if (head == NULL) {
+        return;
+    }
+
+    verificarTentativas(head->prox, secreta1, secreta2, acertou1, acertou2);
+    verificarEImprimirPalavras(head->palavra, secreta1, secreta2, acertou1, acertou2);
 }
 
 void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, bool* acertou1, bool* acertou2) {
@@ -175,22 +232,29 @@ void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, boo
 
 void adicionarAoRanking(char* nome, int tentativas, int acertos) {
     Jogador* novo = (Jogador*)malloc(sizeof(Jogador));
+    if (novo == NULL) {
+        printf("Erro ao alocar memória para novo jogador.\n");
+        exit(1);
+    }
     strcpy(novo->nome, nome);
     novo->tentativas = tentativas;
     novo->acertos = acertos;
+    novo->tentativasList = NULL;
     novo->prox = NULL;
 
-    Jogador **ptr = &ranking, *anterior = NULL;
-    while (*ptr && ((*ptr)->acertos > acertos || ((*ptr)->acertos == acertos && (*ptr)->tentativas <= tentativas))) {
-        anterior = *ptr;
-        ptr = &(*ptr)->prox;
-    }
-    if (anterior) {
-        novo->prox = anterior->prox;
-        anterior->prox = novo;
-    } else {
+    if (ranking == NULL || (ranking->acertos < acertos) || 
+        (ranking->acertos == acertos && ranking->tentativas > tentativas)) {
         novo->prox = ranking;
         ranking = novo;
+    } else {
+        Jogador* atual = ranking;
+        while (atual->prox != NULL && 
+              ((atual->prox->acertos > acertos) || 
+              (atual->prox->acertos == acertos && atual->prox->tentativas <= tentativas))) {
+            atual = atual->prox;
+        }
+        novo->prox = atual->prox;
+        atual->prox = novo;
     }
 }
 
@@ -222,12 +286,16 @@ void salvarRanking() {
 }
 
 void exibirRanking() {
+    limparTela();
+
     printf("Ranking:\n");
     Jogador *atual = ranking;
     while (atual) {
         printf("%s - Tentativas: %d, Acertos: %d\n", atual->nome, atual->tentativas, atual->acertos);
         atual = atual->prox;
     }
+
+    pausarParaContinuar();
 }
 
 void liberarRanking() {
@@ -246,13 +314,24 @@ void resetarRanking() {
     if (file) {
         fclose(file);
         printf("Ranking limpo com sucesso.\n");
+        pausarParaContinuar(); 
     } else {
         printf("Erro ao limpar o ranking.\n");
+        pausarParaContinuar(); 
     }
 }
 
 void converterParaMinusculas(char* str) {
     for (int i = 0; str[i]; i++) {
         str[i] = tolower(str[i]);
+    }
+}
+
+void liberarTentativas(Tentativa* head) {
+    Tentativa* atual = head;
+    while (atual != NULL) {
+        Tentativa* temp = atual;
+        atual = atual->prox;
+        free(temp);
     }
 }
