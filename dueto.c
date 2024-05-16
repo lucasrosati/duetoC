@@ -62,6 +62,7 @@ void verificarEImprimirPalavras(char* input, char* secreta1, char* secreta2, boo
 void converterParaMinusculas(char* str);
 void adicionarTentativa(Tentativa** head, char* palavra);
 void liberarTentativas(Tentativa* head);
+void insertionSortRanking(Jogador** head);
 
 int main() {
     srand(time(NULL));
@@ -242,20 +243,46 @@ void adicionarAoRanking(char* nome, int tentativas, int acertos) {
     novo->tentativasList = NULL;
     novo->prox = NULL;
 
-    if (ranking == NULL || (ranking->acertos < acertos) || 
-        (ranking->acertos == acertos && ranking->tentativas > tentativas)) {
-        novo->prox = ranking;
+    if (ranking == NULL) {
         ranking = novo;
     } else {
         Jogador* atual = ranking;
-        while (atual->prox != NULL && 
-              ((atual->prox->acertos > acertos) || 
-              (atual->prox->acertos == acertos && atual->prox->tentativas <= tentativas))) {
+        while (atual->prox != NULL) {
             atual = atual->prox;
         }
-        novo->prox = atual->prox;
         atual->prox = novo;
     }
+
+    insertionSortRanking(&ranking);
+}
+
+void insertionSortRanking(Jogador** head) {
+    if (*head == NULL || (*head)->prox == NULL) {
+        return;
+    }
+
+    Jogador* sorted = NULL;
+    Jogador* atual = *head;
+
+    while (atual != NULL) {
+        Jogador* prox = atual->prox;
+        if (sorted == NULL || sorted->acertos < atual->acertos || 
+            (sorted->acertos == atual->acertos && sorted->tentativas > atual->tentativas)) {
+            atual->prox = sorted;
+            sorted = atual;
+        } else {
+            Jogador* aux = sorted;
+            while (aux->prox != NULL && 
+                  (aux->prox->acertos > atual->acertos || 
+                  (aux->prox->acertos == atual->acertos && aux->prox->tentativas <= atual->tentativas))) {
+                aux = aux->prox;
+            }
+            atual->prox = aux->prox;
+            aux->prox = atual;
+        }
+        atual = prox;
+    }
+    *head = sorted;
 }
 
 void carregarRanking() {
